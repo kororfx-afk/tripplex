@@ -1,0 +1,102 @@
+// FlatBuffers schema for Tripplex message envelope and core payloads
+namespace tripplex;
+
+file_identifier "TPX1";
+
+enum MessageType:byte {
+  NONE = 0,
+  INIT_REQ = 1,
+  INIT_RESP = 2,
+  AUTH_REQ = 3,
+  AUTH_RESP = 4,
+  SUBSCRIBE = 10,
+  UNSUBSCRIBE = 11,
+  TICK = 20,
+  ORDER_REQ = 30,
+  ORDER_ACK = 31,
+  ORDER_FILL = 32,
+  MODIFY_REQ = 33,
+  CANCEL_REQ = 34,
+  QUERY_REQ = 40,
+  QUERY_RESP = 41,
+  HEARTBEAT = 50,
+  SHUTDOWN = 60
+}
+
+table Envelope {
+  version:uint16;
+  msg_type:MessageType;
+  correlation_id:string; // UUID
+  ts_ms:ulong;
+  payload:[ubyte]; // opaque payload (protocol-specific / nested FlatBuffer)
+}
+
+// Init
+table InitReq {
+  config_json:string;
+}
+table InitResp {
+  ok:bool;
+  server_version:string;
+  error:string;
+}
+
+// Subscribe / Tick
+table Subscribe {
+  symbol:string;
+  depth:int = 1;
+}
+
+table PriceLevel {
+  price:double;
+  size:double;
+}
+
+table Tick {
+  symbol:string;
+  bid:double;
+  ask:double;
+  last:double;
+  ts_ms:ulong;
+  bid_levels:[PriceLevel];
+  ask_levels:[PriceLevel];
+}
+
+// Orders
+enum OrdSide:byte { BUY = 0, SELL = 1 }
+enum OrdType:byte { MARKET = 0, LIMIT = 1, STOP = 2, STOP_LIMIT = 3 }
+
+table OrderReq {
+  client_order_id:string; // UUID for idempotency
+  account:string;
+  symbol:string;
+  side:OrdSide;
+  ord_type:OrdType;
+  price:double;
+  qty:double;
+  tif:string; // e.g. GTC, IOC
+  sl:double;
+  tp:double;
+  comment:string;
+}
+
+table OrderAck {
+  client_order_id:string;
+  order_id:string; // broker order id
+  status:string; // PENDING/ACK/REJECT
+  reason:string;
+}
+
+table OrderFill {
+  order_id:string;
+  fill_id:string;
+  price:double;
+  qty:double;
+  ts_ms:ulong;
+}
+
+table Heartbeat {
+  seq:ulong;
+}
+
+root_type Envelope;
